@@ -1,0 +1,147 @@
+import React, { useState, useEffect, useCallback } from 'react'
+import { Box } from '@material-ui/core'
+import { ContentDivider, Button, ButtonBox, ActionDialog } from 'mio-library-ui'
+import Table from './components/Table'
+import Form from './components/Form'
+import api from '~/services/api-contabil'
+import useNotification from '~/hooks/useNotification'
+
+const {{PageName}} = (props) => {
+  const { planoContas } = props
+  const notification = useNotification()
+  const [isLoading, setLoading] = useState(false)
+  const [form, setForm] = useState({
+    isOpen: false,
+    data: {},
+  })
+  const [confirmDelete, setConfirmDelete] = useState({
+    isOpen: false,
+    data: null,
+  })
+
+  const [data, setData] = useState([])
+
+  useEffect(() => {
+    setForm((state) => ({
+      ...state,
+      data: {
+        ...state.data,
+        pContaId: planoContas.id,
+      },
+    }))
+  }, [planoContas])
+
+  useEffect(() => {
+    const handleGetData = async () => {
+      setLoading(true)
+      try {
+        const response = await api.get(
+          `/PContaLacs/GetByPConta?id=${planoContas.id}`,
+        )
+        setData(response.data.data)
+      } catch (err) {}
+      setLoading(false)
+    }
+
+    handleGetData()
+  }, [planoContas.id])
+
+  const handleOpenForm = useCallback(() => {
+    setForm((state) => ({
+      ...state,
+      isOpen: true,
+    }))
+  }, [])
+
+  const handleCloseForm = useCallback(() => {
+    setForm((state) => ({
+      ...state,
+      isOpen: false,
+      data: null,
+    }))
+  }, [])
+
+  const handleAfterFormSubmit = (formData) => {
+    setData((state) => [...state, formData])
+  }
+
+  const handleClickItem = (event, value) => {
+    const map = {
+      delete: openConfirmDelete,
+    }
+    map[event](value)
+  }
+
+  const openConfirmDelete = useCallback(
+    (id) => {
+      setConfirmDelete((state) => ({
+        ...state,
+        isOpen: true,
+        data: id,
+      }))
+    },
+    [setConfirmDelete],
+  )
+
+  const closeConfirmDelete = useCallback(() => {
+    setConfirmDelete((state) => ({
+      ...state,
+      isOpen: false,
+    }))
+  }, [setConfirmDelete])
+
+  const deleteData = useCallback(async () => {
+    try {
+      await api.delete(`PContaLacs/${confirmDelete.data}`)
+      const newData = data.filter((d) => d.id !== confirmDelete.data)
+      setData(newData)
+      closeConfirmDelete()
+      notification.remove()
+    } catch (err) {
+      notification.failed()
+    }
+  }, [confirmDelete, closeConfirmDelete, data, notification])
+
+  return (
+    <Box>
+      <ContentDivider
+        bottom={2}
+        title={`${planoContas?.normal} - ${planoContas?.nome}`}
+        renderRight={
+          <ButtonBox>
+            <Button
+              size="small"
+              color="primary"
+              onClick={() => handleOpenForm()}
+            >
+              Adicionar
+            </Button>
+          </ButtonBox>
+        }
+      ></ContentDivider>
+
+      <Table onItemClick={handleClickItem} data={data} isLoading={isLoading} />
+
+      <Form
+        isOpen={form.isOpen}
+        data={form.data}
+        onClose={handleCloseForm}
+        isLoading={isLoading}
+        onAfterFormSubmit={handleAfterFormSubmit}
+      />
+
+      <ActionDialog
+        isOpen={confirmDelete.isOpen}
+        title={`Excluir registro!`}
+        onClose={closeConfirmDelete}
+        onCancelClick={closeConfirmDelete}
+        okLabel="SIM"
+        onOkClick={deleteData}
+      >
+        Você quer mesmo excluir este registro?
+      </ActionDialog>
+    </Box>
+  )
+}
+
+export default {{PageName}}
