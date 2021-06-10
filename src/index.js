@@ -10,6 +10,7 @@ import {
   FormCrud, 
 } from './styles';
 import theme from './styles/theme';
+import api from './services/api';
 
 export const Interface = () => {
   const [nameForm, setNameForm] = useState('');
